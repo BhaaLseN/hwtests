@@ -548,12 +548,17 @@ void CheckFEXTest()
 	FEX_TEST("XX+ZX+UX+OX");
 
 	// Testing VX (FP invalid operation)
-	// This cannot be set using mtfsb1 :(
-	//SET_BIT(2);
-	// expecting FX, FEX, ?X, ?E
-	//expected = 0xFE0000F8;
-	//fpscr = GetFPSCR();
-	//FEX_TEST("?X");
+	// This cannot be set directly using mtfsb1, but by setting either of the VX* flags
+	SET_BIT(7);
+	SET_BIT(8);
+	SET_BIT(9);
+	SET_BIT(10);
+	SET_BIT(11);
+	SET_BIT(12);
+	// expecting FX, FEX, ?X, ?E, VX*
+	expected = 0xFFF800F8;
+	fpscr = GetFPSCR();
+	FEX_TEST("?X+VX*");
 
 	ResetFPSCR();
 
