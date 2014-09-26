@@ -491,6 +491,75 @@ void FlipTheBitsTest()
 	END_TEST();
 }
 
+void CheckFEXTest()
+{
+	START_TEST();
+
+#define SET_BIT(x) asm("mtfsb1 " #x)
+#define FEX_TEST(flags) \
+	DO_TEST(fpscr == expected, \
+			"CheckFEXTest(" #flags "):\n" \
+			"\tgot: 0x%08x\n" \
+			"\texpected: 0x%08x\n", fpscr, expected)
+
+	ResetFPSCR();
+	u32 fpscr = 0;
+	u32 expected = 0;
+
+	// Set all xx exception enable bits to 1
+	SET_BIT(24);
+	SET_BIT(25);
+	SET_BIT(26);
+	SET_BIT(27);
+	SET_BIT(28);
+
+	// expecting ?E only, no exception flags have been set yet
+	//expected = 0x000000F8;
+	//fpscr = GetFPSCR();
+	//FEX_TEST("?E only");
+
+	// Set the exception bits one by one and verify what FEX does
+	// Testing XX (FP in-exact)
+	SET_BIT(6);
+	// expecting FX, FEX, XX, ?E
+	expected = 0xC20000F8;
+	fpscr = GetFPSCR();
+	FEX_TEST("XX");
+
+	// Testing ZX (FP zero divide)
+	SET_BIT(5);
+	// expecting FX, FEX, XX, ZX, ?E
+	expected = 0xC60000F8;
+	fpscr = GetFPSCR();
+	FEX_TEST("XX+ZX");
+
+	// Testing UX (FP underflow)
+	SET_BIT(4);
+	// expecting FX, FEX, XX, ZX, UX, ?E
+	expected = 0xCE0000F8;
+	fpscr = GetFPSCR();
+	FEX_TEST("XX+ZX+UX");
+
+	// Testing OX (FP overflow)
+	SET_BIT(3);
+	// expecting FX, FEX, XX, ZX, UX, OX, ?E
+	expected = 0xDE0000F8;
+	fpscr = GetFPSCR();
+	FEX_TEST("XX+ZX+UX+OX");
+
+	// Testing VX (FP invalid operation)
+	// This cannot be set using mtfsb1 :(
+	//SET_BIT(2);
+	// expecting FX, FEX, ?X, ?E
+	//expected = 0xFE0000F8;
+	//fpscr = GetFPSCR();
+	//FEX_TEST("?X");
+
+	ResetFPSCR();
+
+	END_TEST();
+}
+
 int main()
 {
 	network_init();
@@ -501,6 +570,7 @@ int main()
 	ClearTest();
 	SetTest();
 	FlipTheBitsTest();
+	CheckFEXTest();
 
 	network_printf("Shutting down...\n");
 	network_shutdown();
